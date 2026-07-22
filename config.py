@@ -28,7 +28,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # ---------- Email backup (optional) ----------
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_PORT = int(os.getenv("EMAIL_PORT") or "587")
 EMAIL_USER = os.getenv("EMAIL_USER", "")          # your Gmail address
 EMAIL_PASS = os.getenv("EMAIL_PASS", "")          # Gmail App Password (not your normal password)
 EMAIL_TO = os.getenv("EMAIL_TO", EMAIL_USER)       # who receives the backup mail
