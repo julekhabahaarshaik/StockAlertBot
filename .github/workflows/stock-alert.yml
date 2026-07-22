@@ -1,0 +1,56 @@
+name: Stock Alert Bot
+
+on:
+  schedule:
+    # Hourly monitor. GitHub cron is UTC. Runs at minute 0 every hour.
+    - cron: "0 * * * *"
+    # Daily summary at 6:00 PM IST = 12:30 UTC.
+    - cron: "30 12 * * *"
+  workflow_dispatch:      # lets you click "Run workflow" manually on GitHub for testing
+
+permissions:
+  contents: write         # needed so the workflow can commit database.db back
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Decide run mode (hourly vs daily summary)
+        id: mode
+        run: |
+          if [ "${{ github.event.schedule }}" = "30 12 * * *" ]; then
+            echo "args=--summary" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_ENABLED: ${{ secrets.EMAIL_ENABLED }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python main.py ${{ steps.mode.outputs.args }}
+
+      - name: Commit updated database back to repo
+        run: |
+          git config --global user.name "stock-alert-bot"
+          git config --global user.email "actions@github.com"
+          git add database.db bot.log 2>/dev/null || true
+          git diff --quiet --cached || git commit -m "chore: update alert history [skip ci]"
+          git push || true
